@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 
 import { TTLCache } from "@/lib/cache/ttlCache";
-import { DemoProvider } from "@/lib/providers";
+import { createProvider } from "@/lib/providers";
 import { buildSnapshot } from "@/lib/snapshot/buildSnapshot";
 import { normalizeSymbol } from "@/lib/symbols/normalize";
 
@@ -35,7 +35,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const provider = new DemoProvider();
+    const provider = createProvider();
     const snapshot = await buildSnapshot({
       provider,
       symbol: normalized.symbol,
@@ -56,8 +56,22 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     return NextResponse.json(snapshot);
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unable to build snapshot";
+
+    if (process.env.NODE_ENV === "development") {
+      console.error(
+        JSON.stringify({
+          event: "snapshot_build_failed",
+          symbol: normalized.symbol,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        })
+      );
+    }
+
     return NextResponse.json(
-      { error: "Unable to build snapshot" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
