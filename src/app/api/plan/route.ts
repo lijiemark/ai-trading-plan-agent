@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 
-import { DemoProvider } from "@/lib/providers";
+import { createProvider } from "@/lib/providers";
 import { buildPlan } from "@/lib/plan/buildPlan";
 import { PlanRequestSchema } from "@/lib/schemas/plan";
 import { normalizeSymbol } from "@/lib/symbols/normalize";
@@ -52,7 +52,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const provider = new DemoProvider();
+    const provider = createProvider();
 
     // Build plan (snapshot caching is handled in buildSnapshot layer)
     const plan = await buildPlan({
