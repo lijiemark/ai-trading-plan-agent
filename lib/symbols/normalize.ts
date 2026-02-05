@@ -164,7 +164,7 @@ export function normalizeSymbol(input: string): {
   }
 
   return { symbol, display: symbol };
-}
+  }
 
 /**
  * Convert internal symbol to Polygon ticker format

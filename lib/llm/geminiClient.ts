@@ -89,6 +89,30 @@ export async function repairPlan(
   }
 }
 
+/**
+ * Generate a market sentiment report using the Report Agent
+ */
+export async function generateReport(
+  snapshot: Snapshot,
+  plan: PlanResponse
+): Promise<string> {
+  const prompt = buildReportPrompt(snapshot, plan);
+
+  try {
+    const response = await client.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
+    return response.text || "";
+  } catch (error) {
+    throw new Error(
+      `Gemini API error in generateReport: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+}
+
 function buildStrategistPrompt(
   snapshot: Snapshot,
   mode?: string,
@@ -198,4 +222,39 @@ Required JSON structure:
 }
 
 Extract the JSON from any markdown code blocks if present, fix all validation errors, and return ONLY the corrected JSON object. No markdown, no code blocks, no explanatory text. Just the JSON.`;
+}
+
+function buildReportPrompt(snapshot: Snapshot, plan: PlanResponse): string {
+  return `You are a market sentiment analyst (Report Agent). Analyze the market snapshot and trading plan to determine market bias and confidence level.
+
+Market Snapshot:
+${JSON.stringify(snapshot, null, 2)}
+
+Trading Plan:
+${JSON.stringify(plan, null, 2)}
+
+Based on the snapshot indicators (price vs VWAP, EMA stack, ADX, ATR) and the trading plan's direction, determine:
+
+1. **Bias**: Is the market sentiment bullish, bearish, or neutral/consolidating?
+   - "bullish": Clear upward momentum, price above VWAP, bullish EMA stack, or plan suggests long positions
+   - "bearish": Clear downward momentum, price below VWAP, bearish EMA stack, or plan suggests short positions
+   - "neutral": Consolidation, choppy price action, mixed signals, or plan suggests no clear direction
+
+2. **Confidence**: How confident are you in this bias assessment? (0-100)
+   - 80-100: Very strong signals, clear trend, high ADX, aligned indicators
+   - 60-79: Strong signals, clear direction
+   - 40-59: Moderate signals, some conflicting indicators
+   - 20-39: Weak signals, mixed indicators
+   - 0-19: Very unclear, conflicting signals
+
+3. **Summary** (optional): A brief one-line explanation of the bias
+
+Generate a JSON object matching this exact structure:
+{
+  "bias": "bullish" | "bearish" | "neutral",
+  "confidence": number (0-100),
+  "summary": "optional brief explanation"
+}
+
+IMPORTANT: Return ONLY valid JSON. No markdown, no code blocks, no explanatory text. Just the JSON object.`;
 }

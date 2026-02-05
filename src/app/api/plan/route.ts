@@ -55,7 +55,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const provider = createProvider();
 
     // Build plan (snapshot caching is handled in buildSnapshot layer)
-    const plan = await buildPlan({
+    const { plan, report } = await buildPlan({
       provider,
       symbol: normalized.symbol,
       mode: validatedRequest.mode,
@@ -72,11 +72,13 @@ export async function POST(request: Request): Promise<NextResponse> {
           scenario: validatedRequest.scenario,
           useCritic: validatedRequest.useCritic ?? false,
           decision: plan.decision,
+          bias: report.bias,
+          confidence: report.confidence,
         })
       );
     }
 
-    return NextResponse.json(plan);
+    return NextResponse.json({ plan, report });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unable to build plan";
