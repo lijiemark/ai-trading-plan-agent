@@ -4,7 +4,8 @@ import { buildSnapshot } from "../snapshot/buildSnapshot";
 import type { MarketDataProvider } from "../providers/types";
 import type { SupportedSymbol } from "../symbols/normalize";
 import { PlanResponseSchema, type PlanResponse } from "../schemas/plan";
-import { generatePlan, criticizePlan, repairPlan } from "../llm/geminiClient";
+import { ReportSchema, type Report } from "../schemas/report";
+import { generatePlan, criticizePlan, repairPlan, generateReport } from "../llm/geminiClient";
 import type { Snapshot } from "../schemas/snapshot";
 
 export interface BuildPlanParams {
@@ -13,6 +14,11 @@ export interface BuildPlanParams {
   mode?: string;
   scenario?: string;
   useCritic?: boolean;
+}
+
+export interface BuildPlanResult {
+  plan: PlanResponse;
+  report: Report;
 }
 
 /**
@@ -65,11 +71,29 @@ async function parseAndValidatePlan(
 }
 
 /**
+ * Parse and validate report JSON
+ */
+function parseAndValidateReport(rawText: string): Report {
+  try {
+    const jsonText = extractJSON(rawText);
+    const parsed = JSON.parse(jsonText);
+    const validated = ReportSchema.parse(parsed);
+    return validated;
+  } catch (error) {
+    throw new Error(
+      `Failed to parse and validate report: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+}
+
+/**
  * Build a trading plan from a market snapshot
  */
 export async function buildPlan(
   params: BuildPlanParams
-): Promise<PlanResponse> {
+): Promise<BuildPlanResult> {
   const { provider, symbol, mode, scenario, useCritic = false } = params;
 
   // Step 1: Build snapshot (direct call, not HTTP)
@@ -87,5 +111,9 @@ export async function buildPlan(
     plan = await parseAndValidatePlan(criticResponse, snapshot);
   }
 
-  return plan;
+  // Step 5: Generate report with Report Agent
+  const reportResponse = await generateReport(snapshot, plan);
+  const report = parseAndValidateReport(reportResponse);
+
+  return { plan, report };
 }

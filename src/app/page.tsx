@@ -6,6 +6,7 @@ import { JsonDetails } from "@/components/JsonDetails";
 import { StatRow } from "@/components/StatRow";
 import type { Snapshot } from "@/lib/schemas/snapshot";
 import type { PlanResponse } from "@/lib/schemas/plan";
+import type { Report } from "@/lib/schemas/report";
 
 export default function Home() {
   const [symbol, setSymbol] = useState("MES");
@@ -16,10 +17,12 @@ export default function Home() {
   >("fake_breakout");
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [plan, setPlan] = useState<PlanResponse | null>(null);
+  const [report, setReport] = useState<Report | null>(null);
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSnapshot, setShowSnapshot] = useState(true);
+  const [showReport, setShowReport] = useState(true);
 
   const fetchSnapshot = async () => {
     setLoadingSnapshot(true);
@@ -90,12 +93,14 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setPlan(data);
+      setPlan(data.plan);
+      setReport(data.report);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to generate plan"
       );
       setPlan(null);
+      setReport(null);
     } finally {
       setLoadingPlan(false);
     }
@@ -103,9 +108,10 @@ export default function Home() {
 
   const handleSymbolChange = (newSymbol: string) => {
     setSymbol(newSymbol);
-    // Clear snapshot and plan when symbol changes
+    // Clear snapshot, plan, and report when symbol changes
     setSnapshot(null);
     setPlan(null);
+    setReport(null);
   };
 
   return (
@@ -322,6 +328,95 @@ export default function Home() {
               />
                 </div>
                 <JsonDetails data={snapshot} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Zoo Report Card */}
+        {report && (
+          <div className="mb-6 rounded-2xl border border-white/20 bg-white/95 backdrop-blur-xl p-6 shadow-2xl shadow-blue-900/30 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/40">
+            <button
+              onClick={() => setShowReport(!showReport)}
+              className="flex items-center gap-2 mb-4 w-full text-left hover:opacity-80 transition-opacity"
+            >
+              <div className="h-2 w-2 rounded-full bg-purple-600 shadow-lg shadow-purple-500/50"></div>
+              <h2 className="text-lg font-semibold text-gray-900">Zoo Report</h2>
+              <span className="ml-auto text-xs text-gray-500">
+                {showReport ? "▼" : "▶"}
+              </span>
+            </button>
+            {showReport && (
+              <div className="animate-in slide-in-from-bottom-4 fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    {/* Icon */}
+                    <div className="text-6xl">
+                      {report.bias === "bullish" && (
+                        <span className="text-6xl" role="img" aria-label="Bull">
+                          🐂
+                        </span>
+                      )}
+                      {report.bias === "bearish" && (
+                        <span className="text-6xl" role="img" aria-label="Bear">
+                          🐻
+                        </span>
+                      )}
+                      {report.bias === "neutral" && (
+                        <span className="text-6xl" role="img" aria-label="Crab">
+                          🦀
+                        </span>
+                      )}
+                    </div>
+                    {/* Bias and Confidence */}
+                    <div className="flex-1">
+                      <div className="mb-2">
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide mr-2">
+                          Bias:
+                        </span>
+                        <span
+                          className={`text-sm font-bold uppercase ${
+                            report.bias === "bullish"
+                              ? "text-emerald-600"
+                              : report.bias === "bearish"
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {report.bias}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                            Confidence:
+                          </span>
+                          <span className="text-sm font-bold text-gray-900">
+                            {report.confidence}%
+                          </span>
+                        </div>
+                        {/* Confidence Bar */}
+                        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              report.bias === "bullish"
+                                ? "bg-gradient-to-r from-emerald-500 to-emerald-600"
+                                : report.bias === "bearish"
+                                  ? "bg-gradient-to-r from-red-500 to-red-600"
+                                  : "bg-gradient-to-r from-gray-400 to-gray-500"
+                            }`}
+                            style={{ width: `${report.confidence}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      {report.summary && (
+                        <p className="mt-3 text-sm text-gray-700 italic">
+                          {report.summary}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
