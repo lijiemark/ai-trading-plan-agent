@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import jsPDF from "jspdf";
 import { Badge } from "@/components/Badge";
 import { JsonDetails } from "@/components/JsonDetails";
 import { StatRow } from "@/components/StatRow";
@@ -23,6 +24,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [showSnapshot, setShowSnapshot] = useState(true);
   const [showReport, setShowReport] = useState(true);
+  const reportCardRef = useRef<HTMLDivElement>(null);
 
   const fetchSnapshot = async () => {
     setLoadingSnapshot(true);
@@ -112,6 +114,275 @@ export default function Home() {
     setSnapshot(null);
     setPlan(null);
     setReport(null);
+  };
+
+  const downloadPlanPDF = () => {
+    if (!plan) return;
+
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+      const lineHeight = 6;
+      const sectionSpacing = 12;
+
+      // Helper function to check if new page needed
+      const checkNewPage = (requiredSpace: number) => {
+        if (yPos + requiredSpace > pageHeight - margin) {
+          doc.addPage();
+          yPos = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Helper function to add text with word wrap
+      const addText = (text: string, fontSize: number, isBold: boolean = false, color: [number, number, number] = [0, 0, 0], x: number = margin) => {
+        doc.setFontSize(fontSize);
+        doc.setTextColor(color[0], color[1], color[2]);
+        if (isBold) {
+          doc.setFont("helvetica", "bold");
+        } else {
+          doc.setFont("helvetica", "normal");
+        }
+
+        const maxWidth = pageWidth - 2 * margin;
+        const lines = doc.splitTextToSize(text, maxWidth - (x - margin));
+
+        checkNewPage(lines.length * lineHeight + 5);
+
+        doc.text(lines, x, yPos);
+        yPos += lines.length * lineHeight + 3;
+      };
+
+      // Helper function to draw a colored box/section
+      const drawSectionBox = (title: string, bgColor: [number, number, number], textColor: [number, number, number] = [255, 255, 255]) => {
+        checkNewPage(15);
+        const boxHeight = 12;
+        doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+        doc.roundedRect(margin, yPos - 8, pageWidth - 2 * margin, boxHeight, 3, 3, "F");
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        doc.text(title, margin + 5, yPos);
+        yPos += boxHeight + 5;
+      };
+
+      // Helper function to draw a divider line
+      const drawDivider = () => {
+        checkNewPage(8);
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += sectionSpacing;
+      };
+
+      // Header with gradient-like effect
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, pageWidth, 50, "F");
+
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("AI Trading Plan Agent", margin, 25);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(200, 200, 200);
+      doc.text(`Symbol: ${symbol} | Generated: ${new Date().toLocaleString()}`, margin, 35);
+
+      yPos = 60;
+
+      // Zoo Report Section
+      if (report) {
+        const biasColor: [number, number, number] =
+          report.bias === "bullish" ? [34, 197, 94] :
+            report.bias === "bearish" ? [239, 68, 68] :
+              [107, 114, 128];
+
+        drawSectionBox("Zoo Report", biasColor);
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(biasColor[0], biasColor[1], biasColor[2]);
+        doc.text(`Bias: ${report.bias.toUpperCase()}`, margin + 5, yPos);
+        yPos += 8;
+
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Confidence: ${report.confidence}%`, margin + 5, yPos);
+
+        // Draw confidence bar
+        const barWidth = pageWidth - 2 * margin - 10;
+        const barHeight = 6;
+        doc.setFillColor(230, 230, 230);
+        doc.roundedRect(margin + 5, yPos + 3, barWidth, barHeight, 2, 2, "F");
+        doc.setFillColor(biasColor[0], biasColor[1], biasColor[2]);
+        doc.roundedRect(margin + 5, yPos + 3, (barWidth * report.confidence) / 100, barHeight, 2, 2, "F");
+        yPos += 15;
+
+        if (report.summary) {
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          const summaryLines = doc.splitTextToSize(`Summary: ${report.summary}`, pageWidth - 2 * margin - 10);
+          doc.text(summaryLines, margin + 5, yPos);
+          yPos += summaryLines.length * lineHeight + 5;
+        }
+        drawDivider();
+      }
+
+      // Plan Section Header
+      drawSectionBox("Trading Plan", [0, 0, 0], [255, 255, 255]);
+
+      // Decision Badge
+      const decisionColor: [number, number, number] = plan.decision === "trade" ? [34, 197, 94] : [239, 68, 68];
+      const decisionText = plan.decision.toUpperCase().replace("_", " ");
+      doc.setFillColor(decisionColor[0], decisionColor[1], decisionColor[2]);
+      const badgeWidth = doc.getTextWidth(decisionText) + 10;
+      doc.roundedRect(margin + 5, yPos - 6, badgeWidth, 10, 5, 5, "F");
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(decisionText, margin + 10, yPos);
+      yPos += 15;
+
+      // Mode and Scenario badges
+      if (plan.mode || plan.scenario) {
+        let badgeX = margin + 5;
+        if (plan.mode) {
+          doc.setFillColor(59, 130, 246); // blue
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          const modeWidth = doc.getTextWidth(`Mode: ${plan.mode}`) + 8;
+          doc.roundedRect(badgeX, yPos - 5, modeWidth, 8, 3, 3, "F");
+          doc.setTextColor(255, 255, 255);
+          doc.text(`Mode: ${plan.mode}`, badgeX + 4, yPos);
+          badgeX += modeWidth + 5;
+        }
+        if (plan.scenario) {
+          doc.setFillColor(245, 158, 11); // amber
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          const scenarioWidth = doc.getTextWidth(`Scenario: ${plan.scenario}`) + 8;
+          doc.roundedRect(badgeX, yPos - 5, scenarioWidth, 8, 3, 3, "F");
+          doc.setTextColor(255, 255, 255);
+          doc.text(`Scenario: ${plan.scenario}`, badgeX + 4, yPos);
+        }
+        yPos += 15;
+      }
+
+      // Reasoning Section
+      checkNewPage(20);
+      doc.setFillColor(248, 250, 252); // gray-50
+      doc.roundedRect(margin, yPos - 5, pageWidth - 2 * margin, 8, 2, 2, "F");
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
+      doc.text("Reasoning", margin + 5, yPos);
+      yPos += 10;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(50, 50, 50);
+      const reasoningLines = doc.splitTextToSize(plan.reasoning, pageWidth - 2 * margin - 10);
+      checkNewPage(reasoningLines.length * lineHeight);
+      doc.text(reasoningLines, margin + 5, yPos);
+      yPos += reasoningLines.length * lineHeight + sectionSpacing;
+
+      // Trade Details
+      if (plan.decision === "trade") {
+        // Entries
+        if (plan.entries && plan.entries.length > 0) {
+          drawSectionBox("Entries", [34, 197, 94]);
+          plan.entries.forEach((entry, idx) => {
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(0, 0, 0);
+            const entryText = `${idx + 1}. ${entry.price.toFixed(2)}${entry.label ? ` - ${entry.label}` : ""}`;
+            doc.text(entryText, margin + 10, yPos);
+            yPos += lineHeight + 2;
+          });
+          yPos += 5;
+        }
+
+        // Stops
+        if (plan.stops && plan.stops.length > 0) {
+          drawSectionBox("Stop Losses", [239, 68, 68]);
+          plan.stops.forEach((stop, idx) => {
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(0, 0, 0);
+            const stopText = `${idx + 1}. ${stop.price.toFixed(2)}${stop.label ? ` - ${stop.label}` : ""}`;
+            doc.text(stopText, margin + 10, yPos);
+            yPos += lineHeight + 2;
+          });
+          yPos += 5;
+        }
+
+        // Targets
+        if (plan.targets && plan.targets.length > 0) {
+          drawSectionBox("Profit Targets", [59, 130, 246]);
+          plan.targets.forEach((target, idx) => {
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(0, 0, 0);
+            const targetText = `${idx + 1}. ${target.price.toFixed(2)}${target.label ? ` - ${target.label}` : ""}`;
+            doc.text(targetText, margin + 10, yPos);
+            yPos += lineHeight + 2;
+          });
+          yPos += 5;
+        }
+
+        // Sizing
+        if (plan.sizing) {
+          drawSectionBox("Position Sizing", [100, 100, 100]);
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(0, 0, 0);
+          if (plan.sizing.riskPerTrade) {
+            doc.text(`Risk per Trade: $${plan.sizing.riskPerTrade.toFixed(2)}`, margin + 10, yPos);
+            yPos += lineHeight + 3;
+          }
+          if (plan.sizing.positionSize) {
+            doc.text(`Position Size: ${plan.sizing.positionSize}`, margin + 10, yPos);
+            yPos += lineHeight + 3;
+          }
+          if (plan.sizing.assumptions) {
+            const assumptionLines = doc.splitTextToSize(`Assumptions: ${plan.sizing.assumptions}`, pageWidth - 2 * margin - 20);
+            doc.text(assumptionLines, margin + 10, yPos);
+            yPos += assumptionLines.length * lineHeight + 3;
+          }
+          yPos += 5;
+        }
+      }
+
+      // Footer with Disclaimer
+      checkNewPage(25);
+      drawDivider();
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(margin, yPos - 5, pageWidth - 2 * margin, 8, 2, 2, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 100, 100);
+      doc.text("Disclaimer", margin + 5, yPos);
+      yPos += 8;
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(120, 120, 120);
+      const disclaimerLines = doc.splitTextToSize(plan.disclaimer, pageWidth - 2 * margin - 10);
+      doc.text(disclaimerLines, margin + 5, yPos);
+
+      // Save PDF
+      const filename = `trading-plan-${symbol}-${new Date().toISOString().split("T")[0]}.pdf`;
+      doc.save(filename);
+    } catch (error) {
+      console.error("Failed to download plan PDF:", error);
+      setError("Failed to download plan PDF. Please try again.");
+    }
   };
 
   return (
@@ -397,7 +668,10 @@ export default function Home() {
 
         {/* Zoo Report Card */}
         {report && (
-          <div className="mb-6 rounded-2xl border border-white/20 bg-white/95 backdrop-blur-xl p-6 shadow-2xl shadow-blue-900/30 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/40">
+          <div
+            ref={reportCardRef}
+            className="mb-6 rounded-2xl border border-white/20 bg-white/95 backdrop-blur-xl p-6 shadow-2xl shadow-blue-900/30 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/40"
+          >
             <button
               onClick={() => setShowReport(!showReport)}
               className="flex items-center gap-2 mb-4 w-full text-left hover:opacity-80 transition-opacity"
@@ -490,11 +764,21 @@ export default function Home() {
                 <div className="h-2 w-2 rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/50"></div>
                 <h2 className="text-lg font-semibold text-gray-900">Trading Plan</h2>
               </div>
-              <Badge
-                variant={plan.decision === "trade" ? "success" : "danger"}
-              >
-                {plan.decision === "trade" ? "TRADE" : "NO TRADE"}
-              </Badge>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={downloadPlanPDF}
+                  className="rounded-lg bg-gray-100 hover:bg-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-all duration-200 hover:shadow-sm flex items-center gap-1.5"
+                  title="Download plan as PDF"
+                >
+                  <span>📥</span>
+                  <span>Download PDF</span>
+                </button>
+                <Badge
+                  variant={plan.decision === "trade" ? "success" : "danger"}
+                >
+                  {plan.decision === "trade" ? "TRADE" : "NO TRADE"}
+                </Badge>
+              </div>
             </div>
 
             {(plan.mode || plan.scenario) && (
