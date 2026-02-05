@@ -19,6 +19,7 @@ export default function Home() {
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSnapshot, setShowSnapshot] = useState(true);
 
   const fetchSnapshot = async () => {
     setLoadingSnapshot(true);
@@ -108,27 +109,33 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 py-8">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            AI Trading Plan Agent
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
+        <header className="mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-1 w-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full shadow-lg shadow-cyan-500/50"></div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-cyan-100 to-blue-200 bg-clip-text text-transparent">
+              AI Trading Plan Agent
+            </h1>
+          </div>
+          <p className="text-sm text-blue-200/80 font-medium ml-[60px]">
             Deterministic market snapshot + Gemini planning (decision support
             only)
           </p>
         </header>
 
         {/* Controls Card */}
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Controls</h2>
+        <div className="mb-6 rounded-2xl border border-white/20 bg-white/95 backdrop-blur-xl p-6 shadow-2xl shadow-blue-900/30 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/40">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-2 w-2 rounded-full bg-blue-600 shadow-lg shadow-blue-500/50"></div>
+            <h2 className="text-lg font-semibold text-gray-900">Controls</h2>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label
                 htmlFor="symbol"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2"
               >
                 Symbol
               </label>
@@ -137,31 +144,33 @@ export default function Home() {
                 type="text"
                 value={symbol}
                 onChange={(e) => handleSymbolChange(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 shadow-sm transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-gray-400"
                 placeholder="MES"
               />
             </div>
 
-            <div className="flex items-center">
-              <input
-                id="useCritic"
-                type="checkbox"
-                checked={useCritic}
-                onChange={(e) => setUseCritic(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label
-                htmlFor="useCritic"
-                className="ml-2 block text-sm font-medium text-gray-700"
-              >
-                Use Critic
-              </label>
+            <div className="flex items-end">
+              <div className="flex items-center h-10 px-4 rounded-lg border border-gray-300 bg-white shadow-sm hover:border-gray-400 transition-colors">
+                <input
+                  id="useCritic"
+                  type="checkbox"
+                  checked={useCritic}
+                  onChange={(e) => setUseCritic(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                />
+                <label
+                  htmlFor="useCritic"
+                  className="ml-2 block text-sm font-medium text-gray-700 cursor-pointer"
+                >
+                  Use Critic
+                </label>
+              </div>
             </div>
 
             <div>
               <label
                 htmlFor="mode"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2"
               >
                 Mode
               </label>
@@ -171,7 +180,7 @@ export default function Home() {
                 onChange={(e) =>
                   setMode(e.target.value as "normal" | "stress")
                 }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-gray-400"
               >
                 <option value="normal">Normal</option>
                 <option value="stress">Stress</option>
@@ -182,7 +191,7 @@ export default function Home() {
               <div>
                 <label
                   htmlFor="scenario"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2"
                 >
                   Scenario
                 </label>
@@ -197,7 +206,7 @@ export default function Home() {
                         | "atr_spike"
                     )
                   }
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-gray-400"
                 >
                   <option value="fake_breakout">Fake Breakout</option>
                   <option value="vwap_reject">VWAP Reject</option>
@@ -207,38 +216,64 @@ export default function Home() {
             )}
           </div>
 
-          <div className="mt-4 flex gap-3">
+          <div className="mt-6 flex gap-3">
             <button
               onClick={fetchSnapshot}
               disabled={loadingSnapshot || loadingPlan}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:shadow-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-lg disabled:hover:shadow-blue-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              {loadingSnapshot ? "Loading..." : "Fetch Snapshot"}
+              {loadingSnapshot ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                  Loading...
+                </span>
+              ) : (
+                "Fetch Snapshot"
+              )}
             </button>
             <button
               onClick={generatePlan}
               disabled={loadingSnapshot || loadingPlan}
-              className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:from-emerald-700 hover:to-emerald-800 hover:shadow-xl hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-lg disabled:hover:shadow-emerald-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              {loadingPlan ? "Generating..." : "Generate Plan"}
+              {loadingPlan ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                  Generating...
+                </span>
+              ) : (
+                "Generate Plan"
+              )}
             </button>
           </div>
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="text-sm font-medium text-red-800">{error}</p>
+          <div className="mb-6 animate-in slide-in-from-top-2 rounded-xl border border-red-500/30 bg-gradient-to-r from-red-900/40 to-red-800/30 backdrop-blur-xl p-4 shadow-2xl shadow-red-900/30">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-red-400 shadow-lg shadow-red-400/50"></div>
+              <p className="text-sm font-semibold text-red-200">{error}</p>
+            </div>
           </div>
         )}
 
         {/* Snapshot Card */}
         {snapshot && (
-          <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">
-              Snapshot
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mb-6 rounded-2xl border border-white/20 bg-white/95 backdrop-blur-xl p-6 shadow-2xl shadow-blue-900/30 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/40">
+            <button
+              onClick={() => setShowSnapshot(!showSnapshot)}
+              className="flex items-center gap-2 mb-6 w-full text-left hover:opacity-80 transition-opacity"
+            >
+              <div className="h-2 w-2 rounded-full bg-indigo-600 shadow-lg shadow-indigo-500/50"></div>
+              <h2 className="text-lg font-semibold text-gray-900">Market Snapshot</h2>
+              <span className="ml-auto text-xs text-gray-500">
+                {showSnapshot ? "▼" : "▶"}
+              </span>
+            </button>
+            {showSnapshot && (
+              <div className="animate-in slide-in-from-bottom-4 fade-in">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <StatRow label="Symbol" value={snapshot.symbol} />
               <StatRow label="Price" value={snapshot.price.toFixed(2)} />
               <StatRow
@@ -285,16 +320,21 @@ export default function Home() {
                 label="Provider"
                 value={snapshot.dataSource.provider}
               />
-            </div>
-            <JsonDetails data={snapshot} />
+                </div>
+                <JsonDetails data={snapshot} />
+              </div>
+            )}
           </div>
         )}
 
         {/* Plan Card */}
         {plan && (
-          <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Plan</h2>
+          <div className="mb-6 animate-in slide-in-from-bottom-4 fade-in rounded-2xl border border-white/20 bg-white/95 backdrop-blur-xl p-6 shadow-2xl shadow-blue-900/30 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/40">
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-600 shadow-lg shadow-emerald-500/50"></div>
+                <h2 className="text-lg font-semibold text-gray-900">Trading Plan</h2>
+              </div>
               <Badge
                 variant={plan.decision === "trade" ? "success" : "danger"}
               >
@@ -302,44 +342,48 @@ export default function Home() {
               </Badge>
             </div>
 
-            {plan.mode && (
-              <div className="mb-2">
-                <span className="text-sm font-medium text-gray-600">Mode: </span>
-                <span className="text-sm text-gray-900">{plan.mode}</span>
+            {(plan.mode || plan.scenario) && (
+              <div className="mb-4 flex flex-wrap gap-3">
+                {plan.mode && (
+                  <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5">
+                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Mode: </span>
+                    <span className="text-xs font-medium text-blue-900">{plan.mode}</span>
+                  </div>
+                )}
+                {plan.scenario && (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5">
+                    <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                      Scenario:{" "}
+                    </span>
+                    <span className="text-xs font-medium text-amber-900">{plan.scenario}</span>
+                  </div>
+                )}
               </div>
             )}
 
-            {plan.scenario && (
-              <div className="mb-2">
-                <span className="text-sm font-medium text-gray-600">
-                  Scenario:{" "}
-                </span>
-                <span className="text-sm text-gray-900">{plan.scenario}</span>
-              </div>
-            )}
-
-            <div className="mb-4 rounded-lg bg-gray-50 p-4">
-              <h3 className="mb-2 text-sm font-semibold text-gray-700">
+            <div className="mb-6 rounded-xl bg-gradient-to-br from-gray-50 to-blue-50/30 p-5 border border-gray-200">
+              <h3 className="mb-3 text-sm font-bold text-gray-800 uppercase tracking-wide">
                 Reasoning
               </h3>
-              <p className="text-sm text-gray-900">{plan.reasoning}</p>
+              <p className="text-sm leading-relaxed text-gray-700">{plan.reasoning}</p>
             </div>
 
             {plan.decision === "trade" && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {plan.entries && plan.entries.length > 0 && (
-                  <div>
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                  <div className="rounded-xl bg-emerald-50/50 border border-emerald-200/50 p-4">
+                    <h3 className="mb-3 text-sm font-bold text-emerald-900 uppercase tracking-wide">
                       Entries
                     </h3>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {plan.entries.map((entry, idx) => (
                         <li
                           key={idx}
-                          className="text-sm text-gray-900"
+                          className="flex items-center gap-2 text-sm font-medium text-emerald-900"
                         >
-                          {entry.price.toFixed(2)}
-                          {entry.label && ` - ${entry.label}`}
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
+                          <span className="font-mono font-semibold">{entry.price.toFixed(2)}</span>
+                          {entry.label && <span className="text-emerald-700">— {entry.label}</span>}
                         </li>
                       ))}
                     </ul>
@@ -347,18 +391,19 @@ export default function Home() {
                 )}
 
                 {plan.stops && plan.stops.length > 0 && (
-                  <div>
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                  <div className="rounded-xl bg-red-50/50 border border-red-200/50 p-4">
+                    <h3 className="mb-3 text-sm font-bold text-red-900 uppercase tracking-wide">
                       Stops
                     </h3>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {plan.stops.map((stop, idx) => (
                         <li
                           key={idx}
-                          className="text-sm text-gray-900"
+                          className="flex items-center gap-2 text-sm font-medium text-red-900"
                         >
-                          {stop.price.toFixed(2)}
-                          {stop.label && ` - ${stop.label}`}
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-600"></span>
+                          <span className="font-mono font-semibold">{stop.price.toFixed(2)}</span>
+                          {stop.label && <span className="text-red-700">— {stop.label}</span>}
                         </li>
                       ))}
                     </ul>
@@ -366,53 +411,61 @@ export default function Home() {
                 )}
 
                 {plan.targets && plan.targets.length > 0 && (
-                  <div>
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                  <div className="rounded-xl bg-blue-50/50 border border-blue-200/50 p-4">
+                    <h3 className="mb-3 text-sm font-bold text-blue-900 uppercase tracking-wide">
                       Targets
                     </h3>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {plan.targets.map((target, idx) => (
                         <li
                           key={idx}
-                          className="text-sm text-gray-900"
+                          className="flex items-center gap-2 text-sm font-medium text-blue-900"
                         >
-                          {target.price.toFixed(2)}
-                          {target.label && ` - ${target.label}`}
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+                          <span className="font-mono font-semibold">{target.price.toFixed(2)}</span>
+                          {target.label && <span className="text-blue-700">— {target.label}</span>}
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
 
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                  <h3 className="mb-3 text-sm font-bold text-slate-900 uppercase tracking-wide">
                     Sizing
                   </h3>
-                  <div className="space-y-1 text-sm text-gray-900">
+                  <div className="space-y-2 text-sm text-slate-800">
                     {plan.sizing.riskPerTrade && (
-                      <div>
-                        Risk per Trade: ${plan.sizing.riskPerTrade.toFixed(2)}
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Risk per Trade:</span>
+                        <span className="font-mono font-bold text-slate-900">${plan.sizing.riskPerTrade.toFixed(2)}</span>
                       </div>
                     )}
                     {plan.sizing.positionSize && (
-                      <div>Position Size: {plan.sizing.positionSize}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Position Size:</span>
+                        <span className="font-mono font-bold text-slate-900">{plan.sizing.positionSize}</span>
+                      </div>
                     )}
                     {plan.sizing.assumptions && (
-                      <div>Assumptions: {plan.sizing.assumptions}</div>
+                      <div>
+                        <span className="font-semibold">Assumptions: </span>
+                        <span className="text-slate-700">{plan.sizing.assumptions}</span>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="mt-4 border-t border-gray-200 pt-4">
-              <p className="text-xs text-gray-500">{plan.disclaimer}</p>
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <p className="text-xs text-gray-500 leading-relaxed">{plan.disclaimer}</p>
             </div>
 
             <JsonDetails data={plan} />
           </div>
         )}
-      </div>
+        </div>
     </div>
   );
 }
