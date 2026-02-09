@@ -1,4 +1,4 @@
-# TraderPal - an AI Trading Plan Agent
+# TraderPal - AI Trading Plan Agent
 
 Deterministic market snapshot + Gemini planning (**decision support only**).
 

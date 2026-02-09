@@ -186,7 +186,7 @@ export default function Home() {
       doc.setFontSize(24);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text("TraderPal - an AI Trading Plan Agent", margin, 25);
+      doc.text("TraderPal - AI Trading Plan Agent", margin, 25);
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
@@ -393,7 +393,7 @@ export default function Home() {
           <div className="flex items-center gap-3 mb-3">
             <div className="h-1 w-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full shadow-lg shadow-cyan-500/50"></div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-cyan-100 to-blue-200 bg-clip-text text-transparent">
-              TraderPal - an AI Trading Plan Agent
+              TraderPal - AI Trading Plan Agent
             </h1>
           </div>
           <p className="text-sm text-blue-200/80 font-medium ml-[60px]">
