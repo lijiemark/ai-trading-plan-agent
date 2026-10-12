@@ -25,7 +25,7 @@ Create `.env.local` (this repo ignores `.env*` in `.gitignore`).
 
 ```bash
 GEMINI_API_KEY=your_key
-GEMINI_MODEL=gemini-3-pro-preview
+GEMINI_MODEL=gemini-3.1-pro-preview
 ```
 
 ### Market data provider

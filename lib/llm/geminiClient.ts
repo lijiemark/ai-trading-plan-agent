@@ -5,7 +5,15 @@ import type { Snapshot } from "../schemas/snapshot";
 import type { PlanResponse } from "../schemas/plan";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-pro"; // Default documented here
+
+/** Retired model IDs → current replacements (Google returns 404 for these). */
+const GEMINI_MODEL_ALIASES: Record<string, string> = {
+  "gemini-3-pro-preview": "gemini-3.1-pro-preview",
+};
+
+const requestedModel = process.env.GEMINI_MODEL || "gemini-3.1-pro-preview";
+const GEMINI_MODEL =
+  GEMINI_MODEL_ALIASES[requestedModel] ?? requestedModel;
 
 if (!GEMINI_API_KEY) {
   throw new Error(
@@ -33,8 +41,7 @@ export async function generatePlan(
     return response.text || "";
   } catch (error) {
     throw new Error(
-      `Gemini API error in generatePlan: ${
-        error instanceof Error ? error.message : String(error)
+      `Gemini API error in generatePlan: ${error instanceof Error ? error.message : String(error)
       }`
     );
   }
@@ -57,8 +64,7 @@ export async function criticizePlan(
     return response.text || "";
   } catch (error) {
     throw new Error(
-      `Gemini API error in criticizePlan: ${
-        error instanceof Error ? error.message : String(error)
+      `Gemini API error in criticizePlan: ${error instanceof Error ? error.message : String(error)
       }`
     );
   }
@@ -82,8 +88,7 @@ export async function repairPlan(
     return response.text || "";
   } catch (error) {
     throw new Error(
-      `Gemini API error in repairPlan: ${
-        error instanceof Error ? error.message : String(error)
+      `Gemini API error in repairPlan: ${error instanceof Error ? error.message : String(error)
       }`
     );
   }
@@ -106,8 +111,7 @@ export async function generateReport(
     return response.text || "";
   } catch (error) {
     throw new Error(
-      `Gemini API error in generateReport: ${
-        error instanceof Error ? error.message : String(error)
+      `Gemini API error in generateReport: ${error instanceof Error ? error.message : String(error)
       }`
     );
   }
