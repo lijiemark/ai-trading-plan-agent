@@ -32,6 +32,8 @@ export type TradeWorkspace = {
   stopLoss: string;
   takeProfit: string;
   planted: PlantedTrade | null;
+  /** True while Send-to-Trader draft POST is in flight — Plant must wait. */
+  draftPending: boolean;
 };
 
 export type PersistedState = {
@@ -81,6 +83,7 @@ export const defaultTrade: TradeWorkspace = {
   stopLoss: "",
   takeProfit: "",
   planted: null,
+  draftPending: false,
 };
 
 export function storageKeyForUser(userId: string): string {
@@ -112,7 +115,7 @@ export function applyServerWorkspace(
     plan.snapshot = data.plan.snapshot;
   }
 
-  const trade: TradeWorkspace = { ...defaultTrade };
+  const trade: TradeWorkspace = { ...defaultTrade, draftPending: false };
   if (data.tradeIntent) {
     const entry = data.tradeIntent.entry.toFixed(2);
     const stop = data.tradeIntent.stop.toFixed(2);

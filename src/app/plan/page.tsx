@@ -105,6 +105,7 @@ export default function PlanPage() {
       setWorkspace({
         plan: data.plan,
         report: data.report,
+        ...(data.snapshot ? { snapshot: data.snapshot } : {}),
         planId: data.planId ?? null,
       });
     } catch (err) {
@@ -127,7 +128,7 @@ export default function PlanPage() {
     });
   };
 
-  const sendToTrader = () => {
+  const sendToTrader = async () => {
     if (!plan || plan.decision !== "trade") return;
 
     const entry = plan.entries?.[0]?.price;
@@ -141,7 +142,8 @@ export default function PlanPage() {
       return;
     }
 
-    sendLevelsToTrade({
+    // Await draft persist so Plant updates the same row (no race duplicate).
+    await sendLevelsToTrade({
       entry,
       stop,
       target,
@@ -789,7 +791,7 @@ export default function PlanPage() {
               <div className="flex items-center gap-3">
                 {plan.decision === "trade" && (
                   <button
-                    onClick={sendToTrader}
+                    onClick={() => void sendToTrader()}
                     className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:shadow-sm flex items-center gap-1.5"
                     title="Send entry, stop, and take profit to Trade page"
                   >

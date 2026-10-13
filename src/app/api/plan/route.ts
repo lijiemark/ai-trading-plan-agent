@@ -54,7 +54,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const provider = createProvider();
 
-    const { plan, report } = await buildPlan({
+    const { plan, report, snapshot } = await buildPlan({
       provider,
       symbol: normalized.symbol,
       mode: validatedRequest.mode,
@@ -70,6 +70,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       decision: plan.decision,
       planJson: plan,
       reportJson: report,
+      snapshotJson: snapshot,
     });
 
     if (process.env.NODE_ENV === "development") {
@@ -89,7 +90,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    return NextResponse.json({ plan, report, planId: saved.id });
+    return NextResponse.json({
+      plan,
+      report,
+      snapshot,
+      planId: saved.id,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unable to build plan";

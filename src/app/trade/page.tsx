@@ -6,12 +6,24 @@ import { useTraderPal } from "@/components/TraderPalProvider";
 
 export default function TradePage() {
   const { plan: planWorkspace, trade, setTrade } = useTraderPal();
-  const { tradeIntentId, entryPrice, stopLoss, takeProfit, planted } = trade;
+  const {
+    tradeIntentId,
+    entryPrice,
+    stopLoss,
+    takeProfit,
+    planted,
+    draftPending,
+  } = trade;
   const [error, setError] = useState<string | null>(null);
   const [planting, setPlanting] = useState(false);
 
   const plantTrade = async () => {
     setError(null);
+
+    if (draftPending) {
+      setError("Saving draft levels — wait a moment, then plant again.");
+      return;
+    }
 
     if (!entryPrice || !stopLoss || !takeProfit) {
       setError("Enter entry price, stop loss, and take profit.");
@@ -155,10 +167,14 @@ export default function TradePage() {
 
           <button
             onClick={() => void plantTrade()}
-            disabled={planting}
+            disabled={planting || draftPending}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:scale-[1.02] hover:from-emerald-700 hover:via-emerald-700 hover:to-teal-700 hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {planting ? "Planting…" : "Plant the Trade"}
+            {draftPending
+              ? "Saving draft…"
+              : planting
+                ? "Planting…"
+                : "Plant the Trade"}
           </button>
         </div>
 

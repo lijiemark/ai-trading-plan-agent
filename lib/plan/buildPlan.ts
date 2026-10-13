@@ -19,6 +19,8 @@ export interface BuildPlanParams {
 export interface BuildPlanResult {
   plan: PlanResponse;
   report: Report;
+  /** Exact market snapshot used to generate this plan (persist for history). */
+  snapshot: Snapshot;
 }
 
 /**
@@ -115,5 +117,5 @@ export async function buildPlan(
   const reportResponse = await generateReport(snapshot, plan);
   const report = parseAndValidateReport(reportResponse);
 
-  return { plan, report };
+  return { plan, report, snapshot };
 }

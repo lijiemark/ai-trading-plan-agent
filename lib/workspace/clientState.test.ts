@@ -97,6 +97,7 @@ describe("applyServerWorkspace", () => {
     });
     expect(state?.trade.planted).toBeNull();
     expect(state?.trade.entryPrice).toBe("10.00");
+    expect(state?.trade.draftPending).toBe(false);
   });
 });
 
@@ -118,6 +119,7 @@ describe("per-user sessionStorage isolation", () => {
         stopLoss: "0",
         takeProfit: "2",
         planted: null,
+        draftPending: false,
       },
     });
 
@@ -135,6 +137,7 @@ describe("per-user sessionStorage isolation", () => {
         stopLoss: "",
         takeProfit: "",
         planted: null,
+        draftPending: false,
       },
     });
 
