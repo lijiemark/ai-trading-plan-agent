@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { AppNav } from "@/components/AppNav";
+import { AppHeader } from "@/components/AppHeader";
 import { useTraderPal } from "@/components/TraderPalProvider";
 
 export default function TradePage() {
-  const { trade, setTrade } = useTraderPal();
-  const { entryPrice, stopLoss, takeProfit, planted } = trade;
+  const { plan: planWorkspace, trade, setTrade } = useTraderPal();
+  const { tradeIntentId, entryPrice, stopLoss, takeProfit, planted } = trade;
   const [error, setError] = useState<string | null>(null);
+  const [planting, setPlanting] = useState(false);
 
-  const plantTrade = () => {
+  const plantTrade = async () => {
     setError(null);
 
     if (!entryPrice || !stopLoss || !takeProfit) {
@@ -26,32 +27,55 @@ export default function TradePage() {
       return;
     }
 
-    setTrade({
-      planted: {
-        entryPrice: entry.toFixed(2),
-        stopLoss: stop.toFixed(2),
-        takeProfit: target.toFixed(2),
-      },
-    });
+    setPlanting(true);
+    try {
+      const body = {
+        entry,
+        stop,
+        takeProfit: target,
+        status: "planted" as const,
+        sourcePlanId: planWorkspace.planId,
+      };
+
+      const response = tradeIntentId
+        ? await fetch("/api/trade-intents", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: tradeIntentId, ...body }),
+          })
+        : await fetch("/api/trade-intents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          (errorData as { error?: string }).error || "Failed to plant trade"
+        );
+      }
+
+      const data = (await response.json()) as { id: string };
+      setTrade({
+        tradeIntentId: data.id,
+        planted: {
+          entryPrice: entry.toFixed(2),
+          stopLoss: stop.toFixed(2),
+          takeProfit: target.toFixed(2),
+        },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to plant trade");
+    } finally {
+      setPlanting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 py-8">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-10">
-          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-1 w-12 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg shadow-cyan-500/50"></div>
-              <h1 className="bg-gradient-to-r from-white via-cyan-100 to-blue-200 bg-clip-text text-4xl font-bold text-transparent">
-                TraderPal
-              </h1>
-            </div>
-            <AppNav />
-          </div>
-          <p className="ml-0 text-sm font-medium text-blue-200/80 sm:ml-[60px]">
-            Trade — define entry, stop, and target, then plant your commitment
-          </p>
-        </header>
+        <AppHeader subtitle="Trade — define entry, stop, and target, then plant your commitment" />
 
         <div className="mb-6 rounded-2xl border border-white/20 bg-white/95 p-8 shadow-2xl shadow-blue-900/30 backdrop-blur-xl">
           <div className="mb-8 flex items-center gap-3">
@@ -130,10 +154,11 @@ export default function TradePage() {
           <div className="my-6 border-t border-gray-200"></div>
 
           <button
-            onClick={plantTrade}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:scale-[1.02] hover:from-emerald-700 hover:via-emerald-700 hover:to-teal-700 hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98]"
+            onClick={() => void plantTrade()}
+            disabled={planting}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:scale-[1.02] hover:from-emerald-700 hover:via-emerald-700 hover:to-teal-700 hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Plant the Trade
+            {planting ? "Planting…" : "Plant the Trade"}
           </button>
         </div>
 

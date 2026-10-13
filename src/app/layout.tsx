@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Providers } from "@/components/Providers";
 import { TraderPalProvider } from "@/components/TraderPalProvider";
 import "./globals.css";
 
@@ -29,7 +30,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TraderPalProvider>{children}</TraderPalProvider>
+        <Providers>
+          <TraderPalProvider>{children}</TraderPalProvider>
+        </Providers>
       </body>
     </html>
   );

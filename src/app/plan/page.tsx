@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
-import { AppNav } from "@/components/AppNav";
+import { AppHeader } from "@/components/AppHeader";
 import { Badge } from "@/components/Badge";
 import { JsonDetails } from "@/components/JsonDetails";
 import { StatRow } from "@/components/StatRow";
@@ -102,12 +102,16 @@ export default function PlanPage() {
       }
 
       const data = await response.json();
-      setWorkspace({ plan: data.plan, report: data.report });
+      setWorkspace({
+        plan: data.plan,
+        report: data.report,
+        planId: data.planId ?? null,
+      });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to generate plan"
       );
-      setWorkspace({ plan: null, report: null });
+      setWorkspace({ plan: null, report: null, planId: null });
     } finally {
       setLoadingPlan(false);
     }
@@ -119,6 +123,7 @@ export default function PlanPage() {
       snapshot: null,
       plan: null,
       report: null,
+      planId: null,
     });
   };
 
@@ -136,7 +141,12 @@ export default function PlanPage() {
       return;
     }
 
-    sendLevelsToTrade({ entry, stop, target });
+    sendLevelsToTrade({
+      entry,
+      stop,
+      target,
+      sourcePlanId: workspace.planId,
+    });
     router.push("/trade");
   };
 
@@ -413,21 +423,7 @@ export default function PlanPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 py-8">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <header className="mb-10">
-          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-1 w-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full shadow-lg shadow-cyan-500/50"></div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-cyan-100 to-blue-200 bg-clip-text text-transparent">
-                TraderPal
-              </h1>
-            </div>
-            <AppNav />
-          </div>
-          <p className="text-sm text-blue-200/80 font-medium ml-0 sm:ml-[60px]">
-            Plan — deterministic market snapshot + Gemini planning (decision
-            support only)
-          </p>
-        </header>
+        <AppHeader subtitle="Plan — deterministic market snapshot + Gemini planning (decision support only)" />
 
         {/* Controls Card */}
         <div className="mb-6 rounded-2xl border border-white/20 bg-white/95 backdrop-blur-xl p-8 shadow-2xl shadow-blue-900/30 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/40">

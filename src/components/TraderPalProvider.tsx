@@ -9,42 +9,25 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Snapshot } from "@/lib/schemas/snapshot";
-import type { PlanResponse } from "@/lib/schemas/plan";
-import type { Report } from "@/lib/schemas/report";
+import { useSession } from "next-auth/react";
+import {
+  applyServerWorkspace,
+  clearAllLocalWorkspaceStorage,
+  defaultPlan,
+  defaultTrade,
+  loadPersistedForUser,
+  savePersistedForUser,
+  STORAGE_KEY,
+  type PlanWorkspace,
+  type TradeWorkspace,
+  type WorkspaceApiResponse,
+} from "@/lib/workspace/clientState";
 
-export type PlanMode = "normal" | "stress";
-export type Scenario = "fake_breakout" | "vwap_reject" | "atr_spike";
+export type { PlanMode, Scenario, PlanWorkspace, TradeWorkspace, PlantedTrade } from "@/lib/workspace/clientState";
+export { STORAGE_KEY, clearAllLocalWorkspaceStorage };
 
-export type PlanWorkspace = {
-  symbol: string;
-  useCritic: boolean;
-  mode: PlanMode;
-  scenario: Scenario;
-  snapshot: Snapshot | null;
-  plan: PlanResponse | null;
-  report: Report | null;
-  showSnapshot: boolean;
-  showReport: boolean;
-};
-
-export type PlantedTrade = {
-  entryPrice: string;
-  stopLoss: string;
-  takeProfit: string;
-};
-
-export type TradeWorkspace = {
-  entryPrice: string;
-  stopLoss: string;
-  takeProfit: string;
-  planted: PlantedTrade | null;
-};
-
-type PersistedState = {
-  plan: PlanWorkspace;
-  trade: TradeWorkspace;
-};
+/** @deprecated Use clearAllLocalWorkspaceStorage */
+export const clearLocalWorkspaceStorage = clearAllLocalWorkspaceStorage;
 
 type TraderPalContextValue = {
   ready: boolean;
@@ -56,72 +39,76 @@ type TraderPalContextValue = {
     entry: number;
     stop: number;
     target: number;
+    sourcePlanId?: string | null;
   }) => void;
-};
-
-const STORAGE_KEY = "traderpal-workspace-v1";
-
-const defaultPlan: PlanWorkspace = {
-  symbol: "MES",
-  useCritic: false,
-  mode: "normal",
-  scenario: "fake_breakout",
-  snapshot: null,
-  plan: null,
-  report: null,
-  showSnapshot: true,
-  showReport: true,
-};
-
-const defaultTrade: TradeWorkspace = {
-  entryPrice: "",
-  stopLoss: "",
-  takeProfit: "",
-  planted: null,
+  clearLocalWorkspace: () => void;
 };
 
 const TraderPalContext = createContext<TraderPalContextValue | null>(null);
 
-function loadPersisted(): PersistedState | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<PersistedState>;
-    return {
-      plan: { ...defaultPlan, ...parsed.plan },
-      trade: { ...defaultTrade, ...parsed.trade },
-    };
-  } catch {
-    return null;
-  }
-}
-
 export function TraderPalProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id ?? null;
+
   const [ready, setReady] = useState(false);
   const [plan, setPlanState] = useState<PlanWorkspace>(defaultPlan);
   const [trade, setTradeState] = useState<TradeWorkspace>(defaultTrade);
 
+  // Hydrate when auth user is known (and again on account switch).
   useEffect(() => {
-    const saved = loadPersisted();
-    if (saved) {
-      setPlanState(saved.plan);
-      setTradeState(saved.trade);
+    if (status === "loading") return;
+
+    let cancelled = false;
+    setReady(false);
+    setPlanState(defaultPlan);
+    setTradeState(defaultTrade);
+
+    async function hydrate() {
+      // Per-user cache only — never read legacy unscoped key (cross-account leak).
+      if (userId) {
+        const cached = loadPersistedForUser(userId);
+        if (cached && !cancelled) {
+          setPlanState(cached.plan);
+          setTradeState(cached.trade);
+        }
+      }
+
+      try {
+        const res = await fetch("/api/workspace");
+        if (res.ok) {
+          const data = (await res.json()) as WorkspaceApiResponse;
+          const fromServer = applyServerWorkspace(data);
+          if (!cancelled) {
+            if (fromServer) {
+              setPlanState(fromServer.plan);
+              setTradeState(fromServer.trade);
+            } else {
+              // Empty server workspace wins over any stale local cache.
+              setPlanState(defaultPlan);
+              setTradeState(defaultTrade);
+            }
+          }
+        } else if (res.status === 401 && !cancelled) {
+          setPlanState(defaultPlan);
+          setTradeState(defaultTrade);
+        }
+      } catch {
+        // Keep per-user cache / defaults if offline
+      }
+
+      if (!cancelled) setReady(true);
     }
-    setReady(true);
-  }, []);
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, status]);
 
   useEffect(() => {
-    if (!ready) return;
-    try {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ plan, trade } satisfies PersistedState)
-      );
-    } catch {
-      // ignore quota / private mode failures
-    }
-  }, [plan, trade, ready]);
+    if (!ready || !userId) return;
+    savePersistedForUser(userId, { plan, trade });
+  }, [plan, trade, ready, userId]);
 
   const setPlan = useCallback((patch: Partial<PlanWorkspace>) => {
     setPlanState((prev) => ({ ...prev, ...patch }));
@@ -131,14 +118,45 @@ export function TraderPalProvider({ children }: { children: ReactNode }) {
     setTradeState((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  const clearLocalWorkspace = useCallback(() => {
+    clearAllLocalWorkspaceStorage();
+    setPlanState(defaultPlan);
+    setTradeState(defaultTrade);
+  }, []);
+
   const sendLevelsToTrade = useCallback(
-    (levels: { entry: number; stop: number; target: number }) => {
+    (levels: {
+      entry: number;
+      stop: number;
+      target: number;
+      sourcePlanId?: string | null;
+    }) => {
       setTradeState({
+        tradeIntentId: null,
         entryPrice: String(levels.entry),
         stopLoss: String(levels.stop),
         takeProfit: String(levels.target),
         planted: null,
       });
+      void fetch("/api/trade-intents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entry: levels.entry,
+          stop: levels.stop,
+          takeProfit: levels.target,
+          status: "draft",
+          sourcePlanId: levels.sourcePlanId ?? null,
+        }),
+      })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = (await res.json()) as { id: string };
+          setTradeState((prev) => ({ ...prev, tradeIntentId: data.id }));
+        })
+        .catch(() => {
+          // Local UI still works if persist fails
+        });
     },
     []
   );
@@ -151,8 +169,17 @@ export function TraderPalProvider({ children }: { children: ReactNode }) {
       setPlan,
       setTrade,
       sendLevelsToTrade,
+      clearLocalWorkspace,
     }),
-    [ready, plan, trade, setPlan, setTrade, sendLevelsToTrade]
+    [
+      ready,
+      plan,
+      trade,
+      setPlan,
+      setTrade,
+      sendLevelsToTrade,
+      clearLocalWorkspace,
+    ]
   );
 
   return (

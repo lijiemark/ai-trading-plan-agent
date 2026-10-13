@@ -1,7 +1,8 @@
-// Purpose: Market snapshot API endpoint.
+// Purpose: Market snapshot API — auth required (prefer auth + later rate limits).
 
 import { NextResponse } from "next/server";
 
+import { isUnauthorized, requireUser } from "@/lib/auth/requireUser";
 import { TTLCache } from "@/lib/cache/ttlCache";
 import { createProvider } from "@/lib/providers";
 import { buildSnapshot } from "@/lib/snapshot/buildSnapshot";
@@ -11,6 +12,9 @@ const cache = new TTLCache<string, unknown>();
 const CACHE_TTL_MS = 30_000;
 
 export async function GET(request: Request): Promise<NextResponse> {
+  const user = await requireUser();
+  if (isUnauthorized(user)) return user;
+
   const url = new URL(request.url);
   const symbolParam = url.searchParams.get("symbol");
 
@@ -47,6 +51,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       console.info(
         JSON.stringify({
           event: "snapshot_generated",
+          userId: user.id,
           symbol: normalized.symbol,
           provider: provider.name,
           asOf: snapshot.asOf,
@@ -70,10 +75,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       );
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-

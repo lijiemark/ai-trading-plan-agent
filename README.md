@@ -19,7 +19,7 @@ Open `http://localhost:3000`.
 
 ## Environment variables
 
-Create `.env.local` (this repo ignores `.env*` in `.gitignore`).
+Copy `.env.example` to `.env.local` (this repo ignores `.env*` in `.gitignore`).
 
 ### Gemini (required for `/api/plan`)
 
@@ -44,6 +44,40 @@ If using Polygon:
 ```bash
 POLYGON_API_KEY=your_polygon_key
 ```
+
+### Database (Neon Postgres)
+
+```bash
+DATABASE_URL=postgresql://...@ep-xxxx-pooler....neon.tech/neondb?sslmode=require
+# Optional non-pooled URL for migrations:
+# DIRECT_URL=postgresql://...@ep-xxxx....neon.tech/neondb?sslmode=require
+```
+
+Use the **pooled** Neon connection string for the app. Keep secrets in `.env.local` / Vercel env only — never commit them.
+
+```bash
+npm run db:generate   # create SQL migrations from lib/db/schema.ts
+npm run db:migrate    # apply migrations to Neon
+```
+
+### Auth.js (Google OAuth)
+
+```bash
+AUTH_SECRET=           # openssl rand -base64 32
+AUTH_URL=http://localhost:3000
+AUTH_GOOGLE_ID=        # Google Cloud OAuth client ID
+AUTH_GOOGLE_SECRET=    # Google Cloud OAuth client secret
+```
+
+Create an OAuth **Web application** client in Google Cloud Console. Authorized redirect URI:
+
+```text
+http://localhost:3000/api/auth/callback/google
+```
+
+For production, also add `https://YOUR_DOMAIN/api/auth/callback/google` and set `AUTH_URL` to the public origin.
+
+`/plan` and `/trade` require sign-in. Unauthenticated users are redirected to `/login`.
 
 ## Supported symbols
 

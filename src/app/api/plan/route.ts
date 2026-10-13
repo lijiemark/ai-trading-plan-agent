@@ -1,27 +1,28 @@
-// Purpose: Trading plan API endpoint with Gemini integration.
+// Purpose: Trading plan API — auth required; persists plan under session user.
 
 import { NextResponse } from "next/server";
 
+import { isUnauthorized, requireUser } from "@/lib/auth/requireUser";
+import { insertPlanForUser } from "@/lib/db/workspace";
 import { createProvider } from "@/lib/providers";
 import { buildPlan } from "@/lib/plan/buildPlan";
 import { PlanRequestSchema } from "@/lib/schemas/plan";
 import { normalizeSymbol } from "@/lib/symbols/normalize";
 
-// Plan caching skipped initially per plan
-// If implementing later: use snapshot.asOf in cache key, TTL 5-10s max
-
 export async function POST(request: Request): Promise<NextResponse> {
+  const user = await requireUser();
+  if (isUnauthorized(user)) return user;
+
   let body;
   try {
     body = await request.json();
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Invalid JSON body" },
       { status: 400 }
     );
   }
 
-  // Validate request body with PlanRequestSchema
   let validatedRequest;
   try {
     validatedRequest = PlanRequestSchema.parse(body);
@@ -40,7 +41,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  // Normalize symbol
   let normalized;
   try {
     normalized = normalizeSymbol(validatedRequest.symbol);
@@ -54,7 +54,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const provider = createProvider();
 
-    // Build plan (snapshot caching is handled in buildSnapshot layer)
     const { plan, report } = await buildPlan({
       provider,
       symbol: normalized.symbol,
@@ -63,10 +62,22 @@ export async function POST(request: Request): Promise<NextResponse> {
       useCritic: validatedRequest.useCritic ?? false,
     });
 
+    const saved = await insertPlanForUser({
+      userId: user.id,
+      symbol: normalized.symbol,
+      mode: validatedRequest.mode ?? plan.mode ?? null,
+      scenario: validatedRequest.scenario ?? plan.scenario ?? null,
+      decision: plan.decision,
+      planJson: plan,
+      reportJson: report,
+    });
+
     if (process.env.NODE_ENV === "development") {
       console.info(
         JSON.stringify({
           event: "plan_generated",
+          planId: saved.id,
+          userId: user.id,
           symbol: normalized.symbol,
           mode: validatedRequest.mode,
           scenario: validatedRequest.scenario,
@@ -78,7 +89,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    return NextResponse.json({ plan, report });
+    return NextResponse.json({ plan, report, planId: saved.id });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unable to build plan";
@@ -93,9 +104,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
