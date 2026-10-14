@@ -30,6 +30,7 @@ export default function PlanPage() {
   } = workspace;
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState(false);
+  const [sendingToTrader, setSendingToTrader] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reportCardRef = useRef<HTMLDivElement>(null);
 
@@ -58,18 +59,8 @@ export default function PlanPage() {
     setLoadingPlan(true);
     setError(null);
 
-    // Optionally fetch snapshot first if not available or symbol changed
-    if (!snapshot || snapshot.symbol !== symbol) {
-      try {
-        await fetchSnapshot();
-        // Wait a bit for snapshot to be set
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      } catch (err) {
-        setLoadingPlan(false);
-        return;
-      }
-    }
-
+    // Snapshot for the plan comes from buildPlan via /api/plan — no client
+    // prefetch / setTimeout race with React state.
     try {
       const requestBody: {
         symbol: string;
@@ -129,7 +120,7 @@ export default function PlanPage() {
   };
 
   const sendToTrader = async () => {
-    if (!plan || plan.decision !== "trade") return;
+    if (!plan || plan.decision !== "trade" || sendingToTrader) return;
 
     const entry = plan.entries?.[0]?.price;
     const stop = plan.stops?.[0]?.price;
@@ -142,14 +133,26 @@ export default function PlanPage() {
       return;
     }
 
-    // Await draft persist so Plant updates the same row (no race duplicate).
-    await sendLevelsToTrade({
-      entry,
-      stop,
-      target,
-      sourcePlanId: workspace.planId,
-    });
-    router.push("/trade");
+    setSendingToTrader(true);
+    setError(null);
+    try {
+      // Await draft persist so Plant updates the same row (no race duplicate).
+      const result = await sendLevelsToTrade({
+        entry,
+        stop,
+        target,
+        sourcePlanId: workspace.planId,
+      });
+      if (!result.tradeIntentId) {
+        setError(
+          "Could not save trade draft. Check your connection and try Send to Trader again."
+        );
+        return;
+      }
+      router.push("/trade");
+    } finally {
+      setSendingToTrader(false);
+    }
   };
 
   const downloadPlanPDF = () => {
@@ -792,10 +795,13 @@ export default function PlanPage() {
                 {plan.decision === "trade" && (
                   <button
                     onClick={() => void sendToTrader()}
-                    className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:shadow-sm flex items-center gap-1.5"
+                    disabled={sendingToTrader}
+                    className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:shadow-sm flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
                     title="Send entry, stop, and take profit to Trade page"
                   >
-                    <span>Send to Trader</span>
+                    <span>
+                      {sendingToTrader ? "Saving draft…" : "Send to Trader"}
+                    </span>
                   </button>
                 )}
                 <button
