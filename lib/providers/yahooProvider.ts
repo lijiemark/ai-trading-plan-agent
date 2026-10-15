@@ -36,7 +36,7 @@ const toInterval = (timeframe: Timeframe): string => {
 };
 
 export class YahooProvider implements MarketDataProvider {
-  name: "live" = "live";
+  name = "live" as const;
 
   async getCandles(params: {
     symbol: string;

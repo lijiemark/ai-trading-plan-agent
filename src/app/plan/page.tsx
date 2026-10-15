@@ -177,25 +177,6 @@ export default function PlanPage() {
         return false;
       };
 
-      // Helper function to add text with word wrap
-      const addText = (text: string, fontSize: number, isBold: boolean = false, color: [number, number, number] = [0, 0, 0], x: number = margin) => {
-        doc.setFontSize(fontSize);
-        doc.setTextColor(color[0], color[1], color[2]);
-        if (isBold) {
-          doc.setFont("helvetica", "bold");
-        } else {
-          doc.setFont("helvetica", "normal");
-        }
-
-        const maxWidth = pageWidth - 2 * margin;
-        const lines = doc.splitTextToSize(text, maxWidth - (x - margin));
-
-        checkNewPage(lines.length * lineHeight + 5);
-
-        doc.text(lines, x, yPos);
-        yPos += lines.length * lineHeight + 3;
-      };
-
       // Helper function to draw a colored box/section
       const drawSectionBox = (title: string, bgColor: [number, number, number], textColor: [number, number, number] = [255, 255, 255]) => {
         checkNewPage(15);

@@ -47,6 +47,42 @@ describe("applyServerWorkspace", () => {
     expect(applyServerWorkspace({ plan: null, tradeIntent: null })).toBeNull();
   });
 
+  it("prefers server plan snapshot over empty local defaults", () => {
+    const state = applyServerWorkspace({
+      plan: {
+        id: "plan-snap",
+        symbol: "MES",
+        mode: "normal",
+        scenario: null,
+        plan: {
+          decision: "no_trade",
+          reasoning: "wait",
+          stops: [],
+          targets: [],
+          sizing: {},
+          disclaimer: "n/a",
+        },
+        report: null,
+        snapshot: {
+          symbol: "MES",
+          asOf: "2026-01-01T00:00:00.000Z",
+          timeframe: { trend: "15m", volatility: "5m" },
+          price: 1,
+          vwap: { value: 1, band: { low: 0.9, high: 1.1 }, lookback: 20 },
+          ema: { ema20_15m: 1, ema50_15m: 1 },
+          adx: { adx14_15m: 20 },
+          atr: { atr14_5m: 0.5 },
+          regimeHints: { aboveVWAP: true, emaStack: "mixed" },
+          dataSource: { provider: "demo" },
+        },
+      },
+      tradeIntent: null,
+    });
+    expect(state?.plan.snapshot).not.toBeNull();
+    expect(state?.plan.planId).toBe("plan-snap");
+    expect(state?.trade.tradeIntentId).toBeNull();
+  });
+
   it("maps owned plan + planted intent", () => {
     const state = applyServerWorkspace({
       plan: {

@@ -60,10 +60,12 @@ const TraderPalContext = createContext<TraderPalContextValue | null>(null);
 export function TraderPalProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const userId = session?.user?.id ?? null;
-  const userIdRef = useRef(userId);
-  userIdRef.current = userId;
-
+  const userIdRef = useRef<string | null>(null);
   const draftAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
 
   const [ready, setReady] = useState(false);
   const [plan, setPlanState] = useState<PlanWorkspace>(defaultPlan);
@@ -76,15 +78,11 @@ export function TraderPalProvider({ children }: { children: ReactNode }) {
     };
   }, [userId]);
 
-  // Hydrate when auth user is known (and again on account switch).
+  // Hydrate once per mount. Account switch remounts via Providers key={userId}.
   useEffect(() => {
     if (status === "loading") return;
 
     let cancelled = false;
-    draftAbortRef.current?.abort();
-    setReady(false);
-    setPlanState(defaultPlan);
-    setTradeState(defaultTrade);
 
     async function hydrate() {
       // Per-user cache only — never read legacy unscoped key (cross-account leak).
@@ -125,6 +123,7 @@ export function TraderPalProvider({ children }: { children: ReactNode }) {
     void hydrate();
     return () => {
       cancelled = true;
+      draftAbortRef.current?.abort();
     };
   }, [userId, status]);
 

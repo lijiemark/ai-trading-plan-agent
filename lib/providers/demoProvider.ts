@@ -23,7 +23,7 @@ const getDataPath = (symbol: string, timeframe: Timeframe): string =>
   join(process.cwd(), "data", `${symbol}_${timeframe}.json`);
 
 export class DemoProvider implements MarketDataProvider {
-  name: "demo" = "demo";
+  name = "demo" as const;
 
   async getCandles(params: {
     symbol: string;

@@ -5,12 +5,16 @@ import { NextResponse } from "next/server";
 import { isUnauthorized, requireUser } from "@/lib/auth/requireUser";
 import {
   getPlanOwnedByUser,
+  getTradeIntentOwnedByUser,
   insertTradeIntentForUser,
   updateTradeIntentOwnedByUser,
 } from "@/lib/db/workspace";
 import {
   TradeIntentCreateSchema,
   TradeIntentUpdateSchema,
+  TradeIntentStatusSchema,
+  canTransitionStatus,
+  type TradeIntentStatus,
 } from "@/lib/schemas/tradeIntent";
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -107,6 +111,26 @@ export async function PATCH(request: Request): Promise<NextResponse> {
     );
   }
 
+  const existing = await getTradeIntentOwnedByUser(parsed.id, user.id);
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (parsed.status !== undefined) {
+    const fromParsed = TradeIntentStatusSchema.safeParse(existing.status);
+    const from: TradeIntentStatus = fromParsed.success
+      ? fromParsed.data
+      : "draft";
+    if (!canTransitionStatus(from, parsed.status)) {
+      return NextResponse.json(
+        {
+          error: `Invalid status transition: ${from} → ${parsed.status}`,
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   if (parsed.sourcePlanId) {
     const owned = await getPlanOwnedByUser(parsed.sourcePlanId, user.id);
     if (!owned) {
@@ -132,7 +156,6 @@ export async function PATCH(request: Request): Promise<NextResponse> {
     plantedAt,
   });
 
-  // Missing or other-user id → same 404 (no existence leak).
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

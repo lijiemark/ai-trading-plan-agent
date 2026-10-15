@@ -13,7 +13,7 @@ interface PolygonProviderConfig {
 }
 
 export class PolygonProvider implements MarketDataProvider {
-  name: "live" = "live";
+  name = "live" as const;
   private readonly client: ReturnType<typeof restClient>;
 
   constructor(config: PolygonProviderConfig) {

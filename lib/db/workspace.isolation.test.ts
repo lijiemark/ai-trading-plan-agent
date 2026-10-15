@@ -55,25 +55,38 @@ describeDb("workspace ownership isolation (Neon)", () => {
       planJson: {
         decision: "trade",
         reasoning: "isolation fixture",
-        stops: [{ price: 1 }],
-        targets: [{ price: 2 }],
+        stops: [{ price: 95 }],
+        targets: [{ price: 110 }],
         sizing: {},
         disclaimer: "test",
       },
       reportJson: { bias: "neutral", confidence: 50 },
+      snapshotJson: {
+        symbol: "MES",
+        asOf: "2026-01-01T00:00:00.000Z",
+        price: 100,
+        note: "exact snapshot fixture",
+      },
     });
     planAId = plan.id;
 
-    const intent = await insertTradeIntentForUser({
+    // Draft first, then plant same row (no duplicate intent for happy path).
+    const draft = await insertTradeIntentForUser({
       userId: userA,
       entry: 100,
       stop: 95,
       takeProfit: 110,
-      status: "planted",
+      status: "draft",
       sourcePlanId: planAId,
+    });
+    const { updateTradeIntentOwnedByUser } = await import("./workspace");
+    const planted = await updateTradeIntentOwnedByUser({
+      id: draft.id,
+      userId: userA,
+      status: "planted",
       plantedAt: new Date(),
     });
-    intentAId = intent.id;
+    intentAId = planted!.id;
   }, 60_000);
 
   afterAll(async () => {
@@ -84,7 +97,7 @@ describeDb("workspace ownership isolation (Neon)", () => {
     await db.delete(users).where(inArray(users.id, [userA, userB]));
   }, 60_000);
 
-  it("latest plan is scoped to owner", async () => {
+  it("latest plan is scoped to owner and keeps snapshot", async () => {
     const {
       getLatestPlanForUser,
       getPlanOwnedByUser,
@@ -92,12 +105,30 @@ describeDb("workspace ownership isolation (Neon)", () => {
 
     const own = await getLatestPlanForUser(userA);
     expect(own?.id).toBe(planAId);
+    expect(own?.snapshotJson).toMatchObject({ symbol: "MES", price: 100 });
 
     const other = await getLatestPlanForUser(userB);
     expect(other).toBeNull();
 
     expect(await getPlanOwnedByUser(planAId, userA)).not.toBeNull();
     expect(await getPlanOwnedByUser(planAId, userB)).toBeNull();
+  });
+
+  it("draft→plant updates same intent id (no duplicate)", async () => {
+    const { getLatestTradeIntentForUser } = await import("./workspace");
+    const { getDb } = await import("./index");
+    const { tradeIntents } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+
+    const latest = await getLatestTradeIntentForUser(userA);
+    expect(latest?.id).toBe(intentAId);
+    expect(latest?.status).toBe("planted");
+
+    const rows = await getDb()
+      .select({ id: tradeIntents.id })
+      .from(tradeIntents)
+      .where(eq(tradeIntents.userId, userA));
+    expect(rows).toHaveLength(1);
   });
 
   it("latest trade intent is scoped to owner", async () => {

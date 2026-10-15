@@ -98,6 +98,20 @@ export async function getLatestTradeIntentForUser(
   return rows[0] ?? null;
 }
 
+/** Returns the intent only if it belongs to userId (cross-account → null). */
+export async function getTradeIntentOwnedByUser(
+  intentId: string,
+  userId: string
+): Promise<TradeIntentRow | null> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(tradeIntents)
+    .where(and(eq(tradeIntents.id, intentId), eq(tradeIntents.userId, userId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 /** Update only if the intent belongs to userId (cross-account → null). */
 export async function updateTradeIntentOwnedByUser(input: {
   id: string;
